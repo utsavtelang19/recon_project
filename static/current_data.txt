@@ -1,0 +1,1 @@
+{'target': 'google.com', 'subdomains': 12, 'ports': 5, 'cvss': 'Not Calculated'}

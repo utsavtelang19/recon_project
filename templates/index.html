@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reconaissance Terminal</title>
+    <style>
+        body {
+            font-family: 'Courier New', Courier, monospace;
+            background-color: #0d1117;
+            color: #58a6ff;
+            margin: 0;
+            padding: 20px;
+        }
+
+        .dashboard {
+            max-width: 1100px;
+            margin: 0 auto;
+            background: #161b22;
+            padding: 25px;
+            border-radius: 6px;
+            border: 1px solid #30363d;
+            box-shadow: 0px 10px 30px rgba(0, 0, 0, 0.5);
+        }
+
+        h1 {
+            color: #58a6ff;
+            margin-top: 0;
+            border-bottom: 2px solid #30363d;
+            padding-bottom: 10px;
+            font-size: 24px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+
+        .search-box {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 25px;
+        }
+
+        input[type="text"] {
+            flex: 1;
+            padding: 12px;
+            background: #0d1117;
+            border: 1px solid #30363d;
+            color: #79c0ff;
+            border-radius: 4px;
+            font-size: 16px;
+        }
+
+        input[type="text"]:focus {
+            border-color: #58a6ff;
+            outline: none;
+        }
+
+        button {
+            padding: 12px 25px;
+            background: #238636;
+            color: #ffffff;
+            border: none;
+            border-radius: 4px;
+            font-weight: bold;
+            cursor: pointer;
+            text-transform: uppercase;
+            font-size: 14px;
+        }
+
+        button:hover {
+            background: #2ea043;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        .card {
+            background: #0d1117;
+            border: 1px solid #30363d;
+            padding: 15px;
+            border-radius: 4px;
+        }
+
+        .card h3 {
+            color: #ff7b72;
+            margin-top: 0;
+            border-bottom: 1px dashed #30363d;
+            padding-bottom: 5px;
+            font-size: 16px;
+        }
+
+        pre {
+            background: #161b22;
+            padding: 10px;
+            border-radius: 4px;
+            overflow-x: auto;
+            color: #c9d1d9;
+            font-size: 13px;
+            max-height: 200px;
+        }
+
+        .status-bar {
+            margin-top: 20px;
+            font-size: 14px;
+            color: #8b949e;
+        }
+
+        .loading {
+            color: #d2a8ff;
+            font-weight: bold;
+            display: none;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="dashboard">
+        <h1>[!] Reconaissance Automation Dashboard</h1>
+
+        <div class="search-box">
+            <input type="text" id="targetInput" placeholder="Enter target domain or IP (e.g., example.com or 8.8.8.8)">
+            <button onclick="startRecon()">Execute Scan</button>
+        </div>
+
+        <div id="loadingText" class="loading">[-] Executing scanning modules... Please wait...</div>
+
+        <div class="grid">
+            <div class="card">
+                <h3>Target Metadata</h3>
+                <p><strong>Input Target:</strong> <span id="metaTarget">N/A</span></p>
+                <p><strong>Resolved IP:</strong> <span id="metaIP">N/A</span></p>
+            </div>
+            <div class="card">
+                <h3>Active Live Ping</h3>
+                <pre id="pingResult">Awaiting scan execution...</pre>
+            </div>
+            <div class="card">
+                <h3>DNS / Nameserver Records</h3>
+                <pre id="dnsResult">Awaiting scan execution...</pre>
+            </div>
+            <div class="card">
+                <h3>Core Port Infrastructure</h3>
+                <pre id="portResult">Awaiting scan execution...</pre>
+            </div>
+        </div>
+
+        <div class="scanner-section"
+            style="margin-top: 20px; border: 1px solid #ccc; padding: 15px; border-radius: 5px;">
+            <h3>Anonymous Login Vulnerability Check</h3>
+            <label for="anon-target">Target IP / Domain:</label>
+            <input type="text" id="anon-target" placeholder="e.g., ftp.debian.org">
+
+            <label for="anon-port">Port:</label>
+            <select id="anon-port">
+                <option value="21">FTP (Port 21)</option>
+            </select>
+
+            <button onclick="checkAnonymousLogin()" style="margin-left: 10px;">Run Check</button>
+
+            <div id="anon-result" style="margin-top: 15px; font-weight: bold; white-space: pre-wrap;"></div>
+        </div>
+
+
+        <div
+            style="max-width: 900px; margin: 20px auto; border: 1px solid #ccc; padding: 20px; border-radius: 6px; font-family: sans-serif;">
+            <h2 style="margin-top: 0; color: #333;">Nmap Comprehensive Enterprise Scanner</h2>
+            <p style="color: #666; font-size: 14px;">
+                Performs a full audit on the target, including <strong>OS Detection</strong>, <strong>Service
+                    Versioning</strong>, <strong>Script Checks</strong>, and <strong>all 65,535 ports</strong>.
+            </p>
+
+            <label for="nmap-target" style="font-weight: bold; display: block; margin-bottom: 5px;">Target IP / Domain
+                Name:</label>
+            <div style="display: flex; gap: 10px;">
+                <input type="text" id="nmap-target" placeholder="e.g., 192.168.1.1 or scanme.nmap.org"
+                    style="flex: 1; padding: 10px; border: 1px solid #ccc; border-radius: 4px; font-size: 16px;">
+                <button onclick="runComprehensiveNmapScan()"
+                    style="padding: 10px 20px; background-color: #007bff; color: white; border: none; border-radius: 4px; font-size: 16px; cursor: pointer; font-weight: bold;">Launch
+                    Deep Scan</button>
+            </div>
+
+            <h4 style="margin-top: 25px; margin-bottom: 5px;">Comprehensive Terminal Output:</h4>
+            <pre id="nmap-report"
+                style="background-color: #1e1e1e; color: #39ff14; padding: 15px; border-radius: 4px; height: 500px; overflow-y: auto; font-family: 'Courier New', Courier, monospace; white-space: pre-wrap; word-wrap: break-word; font-size: 13px; line-height: 1.5; border: 1px solid #000;"></pre>
+        </div>
+
+
+        <div class="status-bar">System Status: Operational | Ready for deployment</div>
+    </div>
+
+    <script>
+
+        function startRecon() {
+            const targetValue = document.getElementById('targetInput').value;
+            if (!targetValue) return alert("Please enter a valid target IP or Domain.");
+
+            // Toggle loading state UI
+            document.getElementById('loadingText').style.display = 'block';
+
+            fetch('/api/scan', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ target: targetValue })
+            })
+                .then(response => response.json())
+                .then(data => {
+                    document.getElementById('loadingText').style.display = 'none';
+                    if (data.error) {
+                        alert(data.error);
+                        return;
+                    }
+                    // Update dashboard elements dynamically
+                    document.getElementById('metaTarget').innerText = data.target;
+                    document.getElementById('metaIP').innerText = data.resolved_ip;
+                    document.getElementById('pingResult').innerText = data.ping;
+                    document.getElementById('dnsResult').innerText = data.dns;
+
+                    // Fixes the [object Object] bug by formatting JSON data array into text lines
+                    if (Array.isArray(data.ports)) {
+                        if (data.ports.length === 0) {
+                            document.getElementById('portResult').innerText = "No open ports detected via Nmap scan.";
+                        } else {
+                            let formattedPorts = data.ports.map(p => {
+                                if (typeof p === 'object') {
+                                    return `Port ${p.port}/${p.protocol} - ${p.state.toUpperCase()} (${p.service})`;
+                                }
+                                return p;
+                            }).join('\n');
+                            document.getElementById('portResult').innerText = formattedPorts;
+                        }
+                    } else {
+                        document.getElementById('portResult').innerText = data.ports;
+                    }
+                })
+
+                .catch(err => {
+                    document.getElementById('loadingText').style.display = 'none';
+                    console.error(err);
+                    alert("An error occurred during scanning modules payload resolution.");
+                });
+        }
+
+        function checkAnonymousLogin() {
+            const target = document.getElementById('anon-target').value;
+            const port = document.getElementById('anon-port').value;
+            const resultDiv = document.getElementById('anon-result');
+
+            if (!target) {
+                alert('Please enter a target address.');
+                return;
+            }
+
+            resultDiv.innerHTML = "Checking target system...";
+            resultDiv.style.color = "black";
+
+            fetch('/api/anonymous-check', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ target: target, port: port })
+            })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.error) {
+                        resultDiv.innerHTML = "Error: " + data.error;
+                        resultDiv.style.color = "red";
+                    } else {
+                        resultDiv.innerHTML = `[${data.status}] ${data.message}`;
+
+                        // Dynamic color formatting based on the structural result status
+                        if (data.status === 'VULNERABLE') {
+                            resultDiv.style.color = "red";
+                        } else if (data.status === 'SECURE') {
+                            resultDiv.style.color = "green";
+                        } else {
+                            resultDiv.style.color = "orange";
+                        }
+                    }
+                })
+                .catch(error => {
+                    resultDiv.innerHTML = "Connection error: " + error;
+                    resultDiv.style.color = "red";
+                });
+        }
+
+        function runComprehensiveNmapScan() {
+            const targetInput = document.getElementById('nmap-target');
+            const target = targetInput.value.trim();
+            const terminal = document.getElementById('nmap-report');
+
+            if (!target) {
+                alert('Please enter a valid target IP address or Domain name.');
+                return;
+            }
+
+            // Clear terminal screen and show a detailed processing status
+            terminal.innerHTML = `[+] Initiating deep network assessment against: ${target}\n` +
+                `[+] Profile active: All-Ports (-p-), Aggressive Auditing (-A), Fast Execution (-T4)\n` +
+                `[+] Status: Scanning target. Deep port sweeps take considerable time to complete.\n` +
+                `[+] Please do not refresh this page...`;
+            terminal.style.color = "#39ff14"; // Classic terminal neon green
+
+            fetch('/api/scan/nmap', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ target: target })
+            })
+                .then(response => response.json())
+                .then(data => {
+                    // Render the raw, unmanipulated terminal output directly inside the <pre> tag
+                    terminal.innerHTML = data.report;
+                    if (data.status === 'error') {
+                        terminal.style.color = "#ff3333"; // Turn text red on system failure
+                    }
+                })
+                .catch(err => {
+                    terminal.innerHTML = "[!] Web service communication breakdown: " + err;
+                    terminal.style.color = "#ff3333";
+                });
+        }
+
+
+    </script>
+</body>
+
+</html>

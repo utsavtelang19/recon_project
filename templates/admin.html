@@ -1,0 +1,336 @@
+{% extends "base.html" %}
+
+{% block title %}Admin Control Panel - Reconnaissance Terminal{% endblock %}
+
+{% block content %}
+<div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px; margin-bottom: 25px;">
+    <div>
+        <h1 style="color: var(--accent-purple); margin: 0;">[#] ROOT ADMINISTRATOR CONSOLE</h1>
+        <p style="color: var(--text-muted); font-size: 13px; margin: 4px 0 0 0;">
+            Central management for user quotas, subscription tiers, system audits, and database logs.
+        </p>
+    </div>
+    <div style="display: flex; gap: 10px;">
+        <button onclick="resetAllQuotas()" class="btn-secondary" style="font-size: 12px; border-color: var(--accent-orange); color: var(--accent-orange);">
+            Force Reset All Quotas Today
+        </button>
+    </div>
+</div>
+
+<!-- SYSTEM STATISTICS GRID -->
+<div class="stats-grid">
+    <div class="stat-tile">
+        <div class="stat-label">Total Users</div>
+        <div class="stat-value">{{ stats['total_users'] }}</div>
+        <div style="font-size: 11px; color: var(--text-muted);">Registered accounts</div>
+    </div>
+    <div class="stat-tile">
+        <div class="stat-label">Paid Subscribers</div>
+        <div class="stat-value" style="color: var(--accent-green);">{{ stats['paid_users'] }}</div>
+        <div style="font-size: 11px; color: var(--text-muted);">Monthly/Annual/Lifetime</div>
+    </div>
+    <div class="stat-tile">
+        <div class="stat-label">Free Users</div>
+        <div class="stat-value" style="color: var(--accent-blue);">{{ stats['free_users'] }}</div>
+        <div style="font-size: 11px; color: var(--text-muted);">50 checks/day limit</div>
+    </div>
+    <div class="stat-tile">
+        <div class="stat-label">Scans Today</div>
+        <div class="stat-value" style="color: var(--accent-gold);">{{ stats['today_scans'] }}</div>
+        <div style="font-size: 11px; color: var(--text-muted);">Since 12:00 AM</div>
+    </div>
+    <div class="stat-tile">
+        <div class="stat-label">All-Time Scans</div>
+        <div class="stat-value" style="color: var(--accent-purple);">{{ stats['total_scans'] }}</div>
+        <div style="font-size: 11px; color: var(--text-muted);">Database records</div>
+    </div>
+    <div class="stat-tile">
+        <div class="stat-label">Database Engine</div>
+        <div class="stat-value" style="font-size: 20px; color: #ffffff;">{{ stats['db_type'] }}</div>
+        <div style="font-size: 11px; color: var(--accent-green);">Operational</div>
+    </div>
+</div>
+
+<!-- USER MANAGEMENT TABLE -->
+<div class="card">
+    <h2>[+] Registered User Directory & Quota Controls</h2>
+    <p style="color: var(--text-muted); font-size: 13px;">
+        As Admin, you can view all users, modify their plan tiers (Free, Monthly 200, Lifetime 500), manually reset daily quotas, or suspend accounts.
+    </p>
+
+    <div class="table-responsive">
+        <table>
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Username</th>
+                    <th>Email</th>
+                    <th>Role</th>
+                    <th>Plan Tier</th>
+                    <th>Daily Quota</th>
+                    <th>Used Today</th>
+                    <th>Total Scans</th>
+                    <th>Status</th>
+                    <th>Joined</th>
+                    <th>Administrative Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for u in users %}
+                    <tr id="user-row-{{ u.id }}">
+                        <td>#{{ u.id }}</td>
+                        <td><strong style="color: #ffffff;">{{ u.username }}</strong></td>
+                        <td style="font-size: 12px; color: var(--text-muted);">{{ u.email }}</td>
+                        <td>
+                            {% if u.is_admin() %}
+                                <span class="badge badge-admin">ADMIN</span>
+                            {% elif u.is_paid() %}
+                                <span class="badge badge-paid">PAID</span>
+                            {% else %}
+                                <span class="badge badge-free">FREE</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <select id="plan-select-{{ u.id }}" onchange="changeUserPlan({{ u.id }})" style="padding: 4px 8px; font-size: 12px; margin: 0; width: auto; background: #0d1117;">
+                                <option value="free" {% if u.plan_tier == 'free' and not u.is_admin() %}selected{% endif %}>Free (50/day)</option>
+                                <option value="monthly" {% if u.plan_tier == 'monthly' %}selected{% endif %}>Monthly (200/day)</option>
+                                <option value="annual" {% if u.plan_tier == 'annual' %}selected{% endif %}>Annual (200/day)</option>
+                                <option value="lifetime" {% if u.plan_tier == 'lifetime' and not u.is_admin() %}selected{% endif %}>Lifetime (500/day)</option>
+                                {% if u.is_admin() %}
+                                    <option value="lifetime" selected>Admin (Unlimited)</option>
+                                {% endif %}
+                            </select>
+                        </td>
+                        <td id="limit-{{ u.id }}">
+                            {% if u.is_admin() %}
+                                <span style="color: var(--accent-purple);">Unlimited</span>
+                            {% else %}
+                                {{ u.daily_limit }} checks/day
+                            {% endif %}
+                        </td>
+                        <td id="today-{{ u.id }}">
+                            <strong>{{ u.checks_today }}</strong>
+                        </td>
+                        <td>{{ u.total_scans }}</td>
+                        <td id="status-{{ u.id }}">
+                            {% if u.is_active %}
+                                <span class="badge badge-secure">Active</span>
+                            {% else %}
+                                <span class="badge badge-danger">Suspended</span>
+                            {% endif %}
+                        </td>
+                        <td style="font-size: 11px; color: var(--text-muted);">{{ u.created_at.strftime('%Y-%m-%d') }}</td>
+                        <td>
+                            <div style="display: flex; gap: 6px;">
+                                <button onclick="resetUserQuota({{ u.id }})" class="btn-secondary" style="padding: 4px 8px; font-size: 11px;" title="Reset daily used checks to 0">
+                                    Reset Quota
+                                </button>
+                                {% if u.id != current_user.id %}
+                                    <button onclick="toggleUserStatus({{ u.id }})" class="btn-secondary" style="padding: 4px 8px; font-size: 11px;">
+                                        {% if u.is_active %}Suspend{% else %}Activate{% endif %}
+                                    </button>
+                                    <button onclick="deleteUser({{ u.id }}, '{{ u.username }}')" class="btn-danger" style="padding: 4px 8px; font-size: 11px;">
+                                        Delete
+                                    </button>
+                                {% else %}
+                                    <span style="font-size: 11px; color: var(--accent-purple); padding: 4px;">(Current Admin)</span>
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- GLOBAL SYSTEM SCAN AUDIT LOG -->
+<div class="card">
+    <h2>[!] Global Cross-User Scan Stream (Recent 100)</h2>
+    <p style="color: var(--text-muted); font-size: 13px;">
+        Audits all reconnaissance operations conducted by all registered users across the platform.
+    </p>
+
+    <div class="table-responsive">
+        <table>
+            <thead>
+                <tr>
+                    <th>Scan ID</th>
+                    <th>Timestamp</th>
+                    <th>User</th>
+                    <th>Target</th>
+                    <th>Scan Module</th>
+                    <th>Status</th>
+                    <th>Summary</th>
+                    <th>View Raw Output</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for scan in recent_scans %}
+                    <tr>
+                        <td>#{{ scan.id }}</td>
+                        <td style="font-size: 12px;">{{ scan.created_at.strftime('%Y-%m-%d %H:%M:%S') }}</td>
+                        <td><strong style="color: var(--accent-purple);">{{ scan.user.username if scan.user else 'Deleted User' }}</strong></td>
+                        <td><strong style="color: var(--accent-blue);">{{ scan.target }}</strong></td>
+                        <td><span class="badge badge-free">{{ scan.scan_type | upper }}</span></td>
+                        <td>
+                            {% if scan.status == 'SUCCESS' or scan.status == 'SECURE' %}
+                                <span class="badge badge-secure">{{ scan.status }}</span>
+                            {% elif scan.status == 'VULNERABLE' %}
+                                <span class="badge badge-vulnerable">{{ scan.status }}</span>
+                            {% else %}
+                                <span class="badge badge-danger">{{ scan.status }}</span>
+                            {% endif %}
+                        </td>
+                        <td style="max-width: 280px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px;">
+                            {{ scan.result_summary or 'Completed' }}
+                        </td>
+                        <td>
+                            <button onclick="viewAdminScan({{ scan.id }})" class="btn-secondary" style="padding: 4px 8px; font-size: 11px;">Inspect</button>
+                            <textarea id="admin_raw_{{ scan.id }}" style="display: none;">{{ scan.full_output or scan.result_summary or 'No output recorded.' }}</textarea>
+                            <input type="hidden" id="admin_target_{{ scan.id }}" value="{{ scan.target }}">
+                            <input type="hidden" id="admin_type_{{ scan.id }}" value="{{ scan.scan_type }}">
+                            <input type="hidden" id="admin_user_{{ scan.id }}" value="{{ scan.user.username if scan.user else 'Unknown' }}">
+                        </td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- SCAN OUTPUT INSPECTION MODAL -->
+<div id="adminScanModal" class="modal-overlay">
+    <div class="modal-content">
+        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 10px; margin-bottom: 15px;">
+            <h3 style="margin: 0; color: var(--accent-purple);">[Admin Audit] Target Scan Stream</h3>
+            <button onclick="closeAdminScanModal()" class="btn-secondary" style="padding: 4px 8px;">✕ Close</button>
+        </div>
+        <div style="font-size: 12px; margin-bottom: 10px; color: var(--text-muted);">
+            Operator: <strong id="adminModalUser" style="color: var(--accent-purple);"></strong> | 
+            Target: <strong id="adminModalTarget" style="color: #ffffff;"></strong> | 
+            Module: <strong id="adminModalType" style="color: var(--accent-green);"></strong>
+        </div>
+        <pre id="adminModalOutput" style="height: 380px; max-height: 50vh; color: var(--accent-green);"></pre>
+        <div style="text-align: right; margin-top: 15px;">
+            <button onclick="closeAdminScanModal()" class="btn">Close</button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    function changeUserPlan(userId) {
+        const select = document.getElementById('plan-select-' + userId);
+        const newTier = select.value;
+
+        fetch(`/admin/api/users/${userId}/update-plan`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ plan_tier: newTier })
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.success) {
+                alert(data.message);
+                document.getElementById('limit-' + userId).innerText = data.user.daily_limit + ' checks/day';
+            } else {
+                alert('Update failed: ' + (data.error || 'Unknown error'));
+            }
+        })
+        .catch(err => alert('Request error: ' + err));
+    }
+
+    function resetUserQuota(userId) {
+        if (!confirm('Reset daily quota for this user to 0 checks used today?')) return;
+
+        fetch(`/admin/api/users/${userId}/reset-quota`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' }
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.success) {
+                alert(data.message);
+                document.getElementById('today-' + userId).innerText = '0';
+            } else {
+                alert('Reset failed: ' + (data.error || 'Unknown error'));
+            }
+        })
+        .catch(err => alert('Request error: ' + err));
+    }
+
+    function toggleUserStatus(userId) {
+        fetch(`/admin/api/users/${userId}/toggle-status`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' }
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.success) {
+                alert(data.message);
+                location.reload();
+            } else {
+                alert('Action failed: ' + (data.error || 'Unknown error'));
+            }
+        })
+        .catch(err => alert('Request error: ' + err));
+    }
+
+    function deleteUser(userId, username) {
+        if (!confirm(`Are you sure you want to permanently delete user "${username}" and all their scan logs? This cannot be undone.`)) return;
+
+        fetch(`/admin/api/users/${userId}`, {
+            method: 'DELETE',
+            headers: { 'Content-Type': 'application/json' }
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.success) {
+                alert(data.message);
+                document.getElementById('user-row-' + userId).remove();
+            } else {
+                alert('Deletion failed: ' + (data.error || 'Unknown error'));
+            }
+        })
+        .catch(err => alert('Request error: ' + err));
+    }
+
+    function resetAllQuotas() {
+        if (!confirm('Are you sure you want to force reset daily check quotas for ALL users right now?')) return;
+
+        fetch('/admin/api/reset-all-quotas', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' }
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.success) {
+                alert(data.message);
+                location.reload();
+            } else {
+                alert('Reset failed: ' + (data.error || 'Unknown error'));
+            }
+        })
+        .catch(err => alert('Request error: ' + err));
+    }
+
+    function viewAdminScan(id) {
+        const raw = document.getElementById('admin_raw_' + id).value;
+        const target = document.getElementById('admin_target_' + id).value;
+        const type = document.getElementById('admin_type_' + id).value;
+        const user = document.getElementById('admin_user_' + id).value;
+
+        document.getElementById('adminModalUser').innerText = user;
+        document.getElementById('adminModalTarget').innerText = target;
+        document.getElementById('adminModalType').innerText = type.toUpperCase();
+        document.getElementById('adminModalOutput').innerText = raw;
+        document.getElementById('adminScanModal').style.display = 'flex';
+    }
+
+    function closeAdminScanModal() {
+        document.getElementById('adminScanModal').style.display = 'none';
+    }
+</script>
+{% endblock %}

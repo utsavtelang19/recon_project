@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Reconnaissance Terminal{% endblock %}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/terminal.css') }}">
+    {% block head %}{% endblock %}
+</head>
+<body>
+
+    <header class="navbar">
+        <a href="{{ url_for('home') }}" class="nav-brand">
+            <span>[!]</span> RECON_OS <span style="font-size: 11px; color: var(--accent-green);">v2.4</span>
+        </a>
+
+        <div class="nav-links">
+            {% if current_user %}
+                <a href="{{ url_for('dashboard') }}" class="nav-link {% if request.path == '/dashboard' or request.path == '/' %}active{% endif %}">Terminal</a>
+                <a href="{{ url_for('history') }}" class="nav-link {% if request.path == '/history' %}active{% endif %}">History</a>
+                <a href="{{ url_for('plans') }}" class="nav-link {% if request.path == '/plans' %}active{% endif %}">Plans & Upgrades</a>
+                
+                {% if current_user.is_admin() %}
+                    <a href="{{ url_for('admin.admin_dashboard') }}" class="nav-link {% if request.path.startswith('/admin') %}active{% endif %}" style="color: var(--accent-purple); font-weight: bold;">
+                        Admin Console
+                    </a>
+                {% endif %}
+
+                <div class="nav-user-status">
+                    {% if current_user.is_admin() %}
+                        <span class="badge badge-admin">Admin</span>
+                    {% elif current_user.is_paid() %}
+                        <span class="badge badge-paid">{{ current_user.plan_tier | upper }} ({{ current_user.daily_limit }}/day)</span>
+                    {% else %}
+                        <span class="badge badge-free">Free (50/day)</span>
+                    {% endif %}
+
+                    <span style="color: var(--accent-blue); font-weight: bold;">{{ current_user.username }}</span>
+                    <a href="{{ url_for('auth.logout') }}" class="nav-link" style="color: var(--accent-red);">Logout</a>
+                </div>
+            {% else %}
+                <a href="{{ url_for('auth.login') }}" class="nav-link {% if request.path == '/login' %}active{% endif %}">Login</a>
+                <a href="{{ url_for('auth.register') }}" class="nav-link {% if request.path == '/register' %}active{% endif %}" style="background: var(--btn-primary); color: white;">Register Free</a>
+            {% endif %}
+        </div>
+    </header>
+
+    <main class="container">
+        <!-- Flash messages -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ category }}">
+                        {{ message }}
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        {% block content %}{% endblock %}
+    </main>
+
+    <footer>
+        <div>
+            [!] RECON AUTOMATION TERMINAL | Database Engine: 
+            <strong style="color: var(--accent-blue);">{{ active_db_type }}</strong> | 
+            Auto Quota Renewal Daily at <strong>12:00 AM Midnight</strong>
+        </div>
+        <div style="margin-top: 6px; font-size: 11px; color: #555;">
+            CEH Reconnaissance Suite | Multi-Tier Role Access Control
+        </div>
+    </footer>
+
+    {% block scripts %}{% endblock %}
+</body>
+</html>

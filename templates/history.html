@@ -1,0 +1,138 @@
+{% extends "base.html" %}
+
+{% block title %}Scan History - Reconnaissance Terminal{% endblock %}
+
+{% block content %}
+<div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px; margin-bottom: 20px;">
+    <div>
+        <h1 style="color: var(--accent-blue); margin: 0;">[+] RECONNAISSANCE SCAN AUDIT LOGS</h1>
+        <p style="color: var(--text-muted); font-size: 13px; margin: 4px 0 0 0;">
+            All your scans and targets are securely recorded in the database.
+        </p>
+    </div>
+    <div style="display: flex; gap: 10px;">
+        <a href="{{ url_for('export_history', format='csv') }}" class="btn btn-secondary" style="font-size: 12px;">Export CSV</a>
+        <a href="{{ url_for('export_history', format='json') }}" class="btn btn-secondary" style="font-size: 12px;">Export JSON</a>
+    </div>
+</div>
+
+<!-- FILTER BAR -->
+<div class="card" style="padding: 12px; margin-bottom: 20px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+    <span style="font-size: 12px; color: var(--text-muted); text-transform: uppercase;">Filter Type:</span>
+    <a href="{{ url_for('history') }}" class="btn-secondary" style="padding: 4px 10px; font-size: 11px; text-decoration: none; {% if not current_type %}background: #30363d; color: var(--accent-blue);{% endif %}">ALL</a>
+    <a href="{{ url_for('history', type='metadata') }}" class="btn-secondary" style="padding: 4px 10px; font-size: 11px; text-decoration: none; {% if current_type == 'metadata' %}background: #30363d; color: var(--accent-blue);{% endif %}">METADATA</a>
+    <a href="{{ url_for('history', type='dns') }}" class="btn-secondary" style="padding: 4px 10px; font-size: 11px; text-decoration: none; {% if current_type == 'dns' %}background: #30363d; color: var(--accent-blue);{% endif %}">DNS</a>
+    <a href="{{ url_for('history', type='ping') }}" class="btn-secondary" style="padding: 4px 10px; font-size: 11px; text-decoration: none; {% if current_type == 'ping' %}background: #30363d; color: var(--accent-blue);{% endif %}">PING</a>
+    <a href="{{ url_for('history', type='ports') }}" class="btn-secondary" style="padding: 4px 10px; font-size: 11px; text-decoration: none; {% if current_type == 'ports' %}background: #30363d; color: var(--accent-blue);{% endif %}">PORTS</a>
+    <a href="{{ url_for('history', type='ftp_anonymous') }}" class="btn-secondary" style="padding: 4px 10px; font-size: 11px; text-decoration: none; {% if current_type == 'ftp_anonymous' %}background: #30363d; color: var(--accent-blue);{% endif %}">FTP ANON</a>
+    <a href="{{ url_for('history', type='nmap') }}" class="btn-secondary" style="padding: 4px 10px; font-size: 11px; text-decoration: none; {% if current_type == 'nmap' %}background: #30363d; color: var(--accent-blue);{% endif %}">NMAP</a>
+</div>
+
+<!-- SCANS TABLE -->
+<div class="card">
+    {% if pagination.items %}
+        <div class="table-responsive">
+            <table>
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Timestamp (UTC)</th>
+                        <th>Target</th>
+                        <th>Resolved IP</th>
+                        <th>Scan Module</th>
+                        <th>Status</th>
+                        <th>Summary</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for scan in pagination.items %}
+                        <tr>
+                            <td>#{{ scan.id }}</td>
+                            <td style="font-size: 12px;">{{ scan.created_at.strftime('%Y-%m-%d %H:%M:%S') }}</td>
+                            <td><strong style="color: var(--accent-blue);">{{ scan.target }}</strong></td>
+                            <td style="font-size: 12px; color: var(--text-muted);">{{ scan.resolved_ip or 'N/A' }}</td>
+                            <td><span class="badge badge-free">{{ scan.scan_type | upper }}</span></td>
+                            <td>
+                                {% if scan.status == 'SUCCESS' or scan.status == 'SECURE' %}
+                                    <span class="badge badge-secure">{{ scan.status }}</span>
+                                {% elif scan.status == 'VULNERABLE' %}
+                                    <span class="badge badge-vulnerable">{{ scan.status }}</span>
+                                {% else %}
+                                    <span class="badge badge-danger">{{ scan.status }}</span>
+                                {% endif %}
+                            </td>
+                            <td style="max-width: 280px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px;">
+                                {{ scan.result_summary or 'Completed' }}
+                            </td>
+                            <td>
+                                <button onclick="viewScanDetails({{ scan.id }})" class="btn-secondary" style="padding: 4px 8px; font-size: 11px;">View Output</button>
+                                <textarea id="raw_{{ scan.id }}" style="display: none;">{{ scan.full_output or scan.result_summary or 'No output recorded.' }}</textarea>
+                                <input type="hidden" id="target_{{ scan.id }}" value="{{ scan.target }}">
+                                <input type="hidden" id="type_{{ scan.id }}" value="{{ scan.scan_type }}">
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- PAGINATION CONTROLS -->
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 20px; font-size: 13px;">
+            <div>
+                Page {{ pagination.page }} of {{ pagination.pages }} (Total: {{ pagination.total }} scans)
+            </div>
+            <div style="display: flex; gap: 8px;">
+                {% if pagination.has_prev %}
+                    <a href="{{ url_for('history', page=pagination.prev_num, type=current_type) }}" class="btn-secondary" style="padding: 6px 12px; text-decoration: none;">&larr; Prev</a>
+                {% endif %}
+                {% if pagination.has_next %}
+                    <a href="{{ url_for('history', page=pagination.next_num, type=current_type) }}" class="btn-secondary" style="padding: 6px 12px; text-decoration: none;">Next &rarr;</a>
+                {% endif %}
+            </div>
+        </div>
+    {% else %}
+        <div style="text-align: center; padding: 40px; color: var(--text-muted);">
+            <h3>No Scans Found</h3>
+            <p>You haven't executed any scans matching this filter yet.</p>
+            <a href="{{ url_for('dashboard') }}" class="btn" style="margin-top: 10px;">Return to Terminal &rarr;</a>
+        </div>
+    {% endif %}
+</div>
+
+<!-- RAW OUTPUT DETAIL MODAL -->
+<div id="scanDetailModal" class="modal-overlay">
+    <div class="modal-content">
+        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 10px; margin-bottom: 15px;">
+            <h3 style="margin: 0; color: var(--accent-blue);">[+] Raw Terminal Stream Output</h3>
+            <button onclick="closeScanModal()" class="btn-secondary" style="padding: 4px 8px;">✕ Close</button>
+        </div>
+        <div style="font-size: 12px; margin-bottom: 10px; color: var(--text-muted);">
+            Target: <strong id="modalTarget" style="color: #ffffff;"></strong> | Module: <strong id="modalType" style="color: var(--accent-green);"></strong>
+        </div>
+        <pre id="modalOutputText" style="height: 380px; max-height: 50vh; color: var(--accent-green);"></pre>
+        <div style="text-align: right; margin-top: 15px;">
+            <button onclick="closeScanModal()" class="btn">Close</button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    function viewScanDetails(id) {
+        const rawText = document.getElementById('raw_' + id).value;
+        const target = document.getElementById('target_' + id).value;
+        const type = document.getElementById('type_' + id).value;
+
+        document.getElementById('modalTarget').innerText = target;
+        document.getElementById('modalType').innerText = type.toUpperCase();
+        document.getElementById('modalOutputText').innerText = rawText;
+        document.getElementById('scanDetailModal').style.display = 'flex';
+    }
+
+    function closeScanModal() {
+        document.getElementById('scanDetailModal').style.display = 'none';
+    }
+</script>
+{% endblock %}

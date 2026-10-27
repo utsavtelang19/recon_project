@@ -1,0 +1,174 @@
+{% extends "base.html" %}
+
+{% block title %}Pricing & Subscription Plans - Reconnaissance Terminal{% endblock %}
+
+{% block content %}
+<div style="text-align: center; margin-bottom: 30px;">
+    <h1 style="color: var(--accent-blue); margin-bottom: 8px;">[+] RECONNAISSANCE TIER SUBSCRIPTIONS</h1>
+    <p style="color: var(--text-muted); font-size: 14px; max-width: 700px; margin: 0 auto;">
+        Unlock higher daily IP check quotas, enterprise all-port Nmap scanning, and data export capabilities. All daily quotas automatically renew at <strong>12:00 AM Midnight</strong> every day.
+    </p>
+</div>
+
+<!-- CURRENT PLAN STATUS -->
+<div class="card" style="border-left: 5px solid var(--accent-green); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px;">
+    <div>
+        <div style="font-size: 11px; text-transform: uppercase; color: var(--text-muted);">Current Active Subscription</div>
+        <div style="font-size: 20px; font-weight: bold; color: #ffffff; margin-top: 4px;">
+            {{ current_user.plan_tier | upper }} TIER 
+            <span style="font-size: 14px; color: var(--accent-green); font-weight: normal;">
+                ({{ current_user.daily_limit }} IP checks / day)
+            </span>
+        </div>
+        <div style="font-size: 12px; color: var(--text-muted); margin-top: 4px;">
+            Status: Active | Quota Used Today: {{ current_user.checks_today }} / {{ current_user.daily_limit }} | 
+            Renews: Daily at 12:00 AM Midnight
+        </div>
+    </div>
+    <div>
+        <span class="badge {% if current_user.is_admin() %}badge-admin{% elif current_user.is_paid() %}badge-paid{% else %}badge-free{% endif %}" style="font-size: 13px; padding: 6px 14px;">
+            {{ current_user.plan_tier | upper }} OPERATOR
+        </span>
+    </div>
+</div>
+
+<!-- PRICING TIERS GRID -->
+<div class="pricing-grid">
+    <!-- FREE TIER -->
+    <div class="pricing-card {% if current_user.plan_tier == 'free' and not current_user.is_admin() %}featured{% endif %}">
+        <div>
+            <span class="badge badge-free">FREE</span>
+            <div class="pricing-price">$0 <span style="font-size: 14px; color: var(--text-muted); font-weight: normal;">/ forever</span></div>
+            <p style="color: var(--text-muted); font-size: 12px;">Standard tier for introductory reconnaissance and vulnerability checks.</p>
+            
+            <ul class="pricing-features">
+                <li><strong style="color: var(--accent-blue);">50 IP checks</strong> per day</li>
+                <li>Daily quota renewal at 12:00 AM</li>
+                <li>Target metadata & IP resolution</li>
+                <li>DNS nameserver records</li>
+                <li>Live ICMP ping latency</li>
+                <li>FTP anonymous authentication audit</li>
+                <li>Comprehensive Nmap scanner</li>
+            </ul>
+        </div>
+
+        <div>
+            {% if current_user.plan_tier == 'free' and not current_user.is_admin() %}
+                <button disabled style="width: 100%; background: #21262d; color: var(--text-muted); cursor: default;">Current Plan</button>
+            {% else %}
+                <button onclick="upgradePlan('free')" class="btn-secondary" style="width: 100%;">Switch to Free</button>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- MONTHLY PRO TIER -->
+    <div class="pricing-card {% if current_user.plan_tier == 'monthly' %}featured{% endif %}">
+        <div>
+            <span class="badge badge-paid">MONTHLY PRO</span>
+            <div class="pricing-price">$19 <span style="font-size: 14px; color: var(--text-muted); font-weight: normal;">/ month</span></div>
+            <p style="color: var(--text-muted); font-size: 12px;">Recommended for active security researchers and penetration testers.</p>
+            
+            <ul class="pricing-features">
+                <li><strong style="color: var(--accent-green);">200 IP checks</strong> per day</li>
+                <li>Daily quota renewal at 12:00 AM</li>
+                <li>All Free tier features included</li>
+                <li>Export history to CSV & JSON</li>
+                <li>Priority scanner execution queue</li>
+                <li>30-day continuous access</li>
+            </ul>
+        </div>
+
+        <div>
+            {% if current_user.plan_tier == 'monthly' %}
+                <button disabled style="width: 100%; background: #21262d; color: var(--text-muted); cursor: default;">Current Plan</button>
+            {% else %}
+                <button onclick="upgradePlan('monthly')" style="width: 100%; background: var(--btn-primary);">Activate Monthly ($19)</button>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- ANNUAL PRO TIER -->
+    <div class="pricing-card {% if current_user.plan_tier == 'annual' %}featured{% endif %}">
+        <div>
+            <span class="badge badge-paid" style="background: rgba(240, 136, 62, 0.2); color: var(--accent-orange); border-color: var(--accent-orange);">ANNUAL PRO</span>
+            <div class="pricing-price">$149 <span style="font-size: 14px; color: var(--text-muted); font-weight: normal;">/ year</span></div>
+            <p style="color: var(--text-muted); font-size: 12px;">Best annual value with 35% savings over monthly billing.</p>
+            
+            <ul class="pricing-features">
+                <li><strong style="color: var(--accent-orange);">200 IP checks</strong> per day</li>
+                <li>Daily quota renewal at 12:00 AM</li>
+                <li>All Monthly Pro capabilities</li>
+                <li>Full 365 days of uninterrupted access</li>
+                <li>Priority customer support</li>
+            </ul>
+        </div>
+
+        <div>
+            {% if current_user.plan_tier == 'annual' %}
+                <button disabled style="width: 100%; background: #21262d; color: var(--text-muted); cursor: default;">Current Plan</button>
+            {% else %}
+                <button onclick="upgradePlan('annual')" style="width: 100%; background: var(--accent-orange); color: #0d1117;">Activate Annual ($149)</button>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- LIFETIME ELITE TIER -->
+    <div class="pricing-card {% if current_user.plan_tier == 'lifetime' and not current_user.is_admin() %}featured{% endif %}" style="border: 2px solid var(--accent-purple);">
+        <div>
+            <span class="badge badge-admin" style="color: var(--accent-purple); border-color: var(--accent-purple);">LIFETIME ELITE</span>
+            <div class="pricing-price">$299 <span style="font-size: 14px; color: var(--text-muted); font-weight: normal;">/ one-time</span></div>
+            <p style="color: var(--text-muted); font-size: 12px;">Ultimate power tier for enterprise analysts and perpetual operations.</p>
+            
+            <ul class="pricing-features">
+                <li><strong style="color: var(--accent-purple);">500 IP checks</strong> per day</li>
+                <li>Daily quota renewal at 12:00 AM</li>
+                <li>Never expires (Perpetual access)</li>
+                <li>VIP Priority scan queue</li>
+                <li>Unlimited scan history logs</li>
+                <li>Instant data export (CSV/JSON)</li>
+            </ul>
+        </div>
+
+        <div>
+            {% if current_user.plan_tier == 'lifetime' and not current_user.is_admin() %}
+                <button disabled style="width: 100%; background: #21262d; color: var(--text-muted); cursor: default;">Current Plan</button>
+            {% else %}
+                <button onclick="upgradePlan('lifetime')" style="width: 100%; background: var(--accent-purple); color: #0d1117;">Get Lifetime Elite ($299)</button>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- UPGRADE SUCCESS MODAL -->
+<div id="upgradeModal" class="modal-overlay">
+    <div class="modal-content" style="text-align: center;">
+        <h3 style="color: var(--accent-green); margin-top: 0;">[✓] SUBSCRIPTION ACTIVATED</h3>
+        <p id="upgradeMessage" style="font-size: 14px; margin: 20px 0;"></p>
+        <button onclick="location.reload()" class="btn" style="background: var(--btn-primary);">Return to Terminal</button>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    function upgradePlan(tier) {
+        if (!confirm(`Are you sure you want to switch to the ${tier.toUpperCase()} tier?`)) return;
+
+        fetch('/api/user/upgrade', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ plan_tier: tier })
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.success) {
+                document.getElementById('upgradeMessage').innerText = data.message;
+                document.getElementById('upgradeModal').style.display = 'flex';
+            } else {
+                alert('Upgrade failed: ' + (data.error || 'Unknown error'));
+            }
+        })
+        .catch(err => alert('Request failed: ' + err));
+    }
+</script>
+{% endblock %}

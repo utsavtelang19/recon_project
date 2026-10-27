@@ -1,0 +1,494 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - Reconnaissance Terminal{% endblock %}
+
+{% block content %}
+<!-- DYNAMIC USER QUOTA & ROLE BANNER -->
+<div class="quota-banner {% if user.is_admin() %}admin{% elif user.is_paid() %}paid{% endif %}">
+    <div class="quota-progress-container">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+            <div>
+                <strong style="color: #ffffff; text-transform: uppercase;">
+                    {% if user.is_admin() %}
+                        [Admin Control: System Unlimited]
+                    {% elif user.is_paid() %}
+                        [{{ user.plan_tier | upper }} Plan: {{ user.daily_limit }} IP Checks/Day]
+                    {% else %}
+                        [Free Plan: 50 IP Checks/Day]
+                    {% endif %}
+                </strong>
+            </div>
+            <div style="font-size: 13px;">
+                {% if user.is_admin() %}
+                    <span style="color: var(--accent-purple); font-weight: bold;">Unlimited Checks</span>
+                {% else %}
+                    Checks Remaining Today: 
+                    <strong id="quotaRemaining" style="color: var(--accent-green);">{{ user.get_remaining_checks() }}</strong> / {{ user.daily_limit }}
+                {% endif %}
+            </div>
+        </div>
+
+        {% if not user.is_admin() %}
+            {% set pct = (user.checks_today / user.daily_limit * 100) if user.daily_limit else 0 %}
+            <div class="quota-progress-bar">
+                <div id="quotaFill" class="quota-progress-fill {% if pct > 85 %}danger{% elif pct > 60 %}warning{% endif %}" 
+                     style="width: {{ 100 - pct }}%;"></div>
+            </div>
+        {% endif %}
+
+        <div style="display: flex; justify-content: space-between; font-size: 11px; color: var(--text-muted); margin-top: 6px;">
+            <span>Checks used today: <strong id="checksUsed">{{ user.checks_today }}</strong></span>
+            <span>Daily Quota Renewal: <strong>12:00 AM Midnight</strong> (in <span id="resetTimer" style="color: var(--accent-blue);">{{ time_info['countdown_str'] }}</span>)</span>
+        </div>
+    </div>
+
+    <div>
+        {% if user.is_admin() %}
+            <a href="{{ url_for('admin.admin_dashboard') }}" class="btn" style="background: var(--accent-purple); color: #0d1117;">
+                Open Admin Panel &rarr;
+            </a>
+        {% elif user.plan_tier == 'free' %}
+            <a href="{{ url_for('plans') }}" class="btn" style="background: var(--accent-green); color: #0d1117;">
+                Upgrade for 200/500 Checks &rarr;
+            </a>
+        {% else %}
+            <a href="{{ url_for('plans') }}" class="btn btn-secondary">
+                View Plan Tiers
+            </a>
+        {% endif %}
+    </div>
+</div>
+
+<!-- TOP FEATURE OVERVIEW -->
+<div class="feature-overview">
+    <div class="feature-card">
+        <h4>1. Initial Multi-Vector Scan</h4>
+        <p>Metadata resolution, active ping latency, DNS nameserver records, and port audits.</p>
+    </div>
+    <div class="feature-card">
+        <h4>2. Anonymous Auth Audit</h4>
+        <p>Checks target services (such as FTP port 21) for unauthorized anonymous authentication.</p>
+    </div>
+    <div class="feature-card">
+        <h4>3. Enterprise Nmap Scanner</h4>
+        <p>Deep audit of all 65,535 ports (-p-), aggressive OS detection (-A), and service versioning.</p>
+    </div>
+</div>
+
+<!-- MODULE 1: INITIAL MULTI-VECTOR RECON -->
+<div class="card">
+    <h2>[+] Module 1: Initial Reconnaissance Scanner</h2>
+    <p style="color: var(--text-muted); font-size: 13px;">
+        Performs simultaneous host resolution, ICMP echo test, DNS records lookup, and open port discovery.
+    </p>
+
+    <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+        <input type="text" id="targetInput" placeholder="Enter target domain or IP (e.g., scanme.nmap.org, 8.8.8.8)" style="flex: 1; min-width: 280px; margin-bottom: 0;">
+        <button id="btnExecuteScan" onclick="startRecon()">Execute Scan</button>
+    </div>
+
+    <div id="loadingText" style="display: none; color: var(--accent-purple); font-weight: bold; margin-top: 15px; font-size: 13px;">
+        [-] Querying scanning modules across host network... Please wait...
+    </div>
+
+    <div class="grid-2" style="margin-top: 20px;">
+        <div class="card" style="background: var(--bg-dark);">
+            <h3 style="color: var(--accent-blue);">Target Metadata</h3>
+            <p><strong>Input Target:</strong> <span id="metaTarget">N/A</span></p>
+            <p><strong>Resolved IP:</strong> <span id="metaIP">N/A</span></p>
+        </div>
+        <div class="card" style="background: var(--bg-dark);">
+            <h3 style="color: var(--accent-green);">Active Live Ping</h3>
+            <pre id="pingResult">Awaiting scan execution...</pre>
+        </div>
+        <div class="card" style="background: var(--bg-dark);">
+            <h3 style="color: var(--accent-gold);">DNS / Nameserver Records</h3>
+            <pre id="dnsResult">Awaiting scan execution...</pre>
+        </div>
+        <div class="card" style="background: var(--bg-dark);">
+            <h3 style="color: var(--accent-orange);">Core Port Infrastructure</h3>
+            <pre id="portResult">Awaiting scan execution...</pre>
+        </div>
+    </div>
+</div>
+
+<!-- MODULE 2: ANONYMOUS LOGIN VULNERABILITY CHECK -->
+<div class="card">
+    <h2>[!] Module 2: Anonymous Authentication Vulnerability Check</h2>
+    <p style="color: var(--text-muted); font-size: 13px;">
+        Audits remote file transfer services for unauthenticated anonymous guest access misconfigurations.
+    </p>
+
+    <div class="grid-2">
+        <div>
+            <label for="anon-target" style="font-size: 12px; color: var(--text-muted);">Target IP / Domain:</label>
+            <input type="text" id="anon-target" placeholder="e.g., ftp.debian.org">
+        </div>
+        <div>
+            <label for="anon-port" style="font-size: 12px; color: var(--text-muted);">Port Service:</label>
+            <select id="anon-port">
+                <option value="21">FTP Service (Port 21)</option>
+            </select>
+        </div>
+    </div>
+
+    <button onclick="checkAnonymousLogin()">Audit Anonymous Login</button>
+
+    <div id="anon-result" style="margin-top: 15px; font-weight: bold; white-space: pre-wrap; font-size: 13px;"></div>
+</div>
+
+<!-- MODULE 3: COMPREHENSIVE ENTERPRISE NMAP SCANNER -->
+<div class="card">
+    <h2>[#] Module 3: Nmap Comprehensive Enterprise Scanner</h2>
+    <p style="color: var(--text-muted); font-size: 13px;">
+        Performs a full audit on the target host: <strong>All 65,535 Ports (-p-)</strong>, <strong>OS Detection</strong>, <strong>Service Versioning (-A)</strong>, and <strong>Verbose Output (-v)</strong>.
+    </p>
+
+    <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+        <input type="text" id="nmap-target" placeholder="e.g., scanme.nmap.org or 192.168.1.1" style="flex: 1; min-width: 280px; margin-bottom: 0;">
+        <button onclick="runComprehensiveNmapScan()" class="btn-blue">Launch Deep Scan</button>
+    </div>
+
+    <h4 style="margin-top: 20px; margin-bottom: 6px; font-size: 13px; color: #c9d1d9;">Comprehensive Terminal Stream:</h4>
+    <pre id="nmap-report" style="color: var(--accent-green); height: 320px;"></pre>
+</div>
+
+<!-- RECENT USER SCANS SAVED TO DATABASE -->
+<div class="card">
+    <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 8px; margin-bottom: 12px;">
+        <h2 style="border-bottom: none; margin: 0;">[~] Recent Scans Saved In Database</h2>
+        <a href="{{ url_for('history') }}" style="color: var(--accent-blue); font-size: 12px; text-decoration: none;">View Full History &rarr;</a>
+    </div>
+
+    {% if recent_scans %}
+        <div class="table-responsive">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Time (Local)</th>
+                        <th>Target</th>
+                        <th>Scan Type</th>
+                        <th>Status</th>
+                        <th>Summary</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody id="recentScansTableBody">
+                    {% for scan in recent_scans %}
+                        <tr>
+                            <td>{{ scan.created_at.strftime('%Y-%m-%d %H:%M:%S') }}</td>
+                            <td><strong style="color: var(--accent-blue);">{{ scan.target }}</strong></td>
+                            <td><span class="badge badge-free">{{ scan.scan_type | upper }}</span></td>
+                            <td>
+                                {% if scan.status == 'SUCCESS' or scan.status == 'SECURE' %}
+                                    <span class="badge badge-secure">{{ scan.status }}</span>
+                                {% elif scan.status == 'VULNERABLE' %}
+                                    <span class="badge badge-vulnerable">{{ scan.status }}</span>
+                                {% else %}
+                                    <span class="badge badge-danger">{{ scan.status }}</span>
+                                {% endif %}
+                            </td>
+                            <td style="max-width: 250px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                                {{ scan.result_summary or 'Completed' }}
+                            </td>
+                            <td>
+                                <button onclick="populateAndRescan('{{ scan.target }}', '{{ scan.scan_type }}')" class="btn-secondary" style="padding: 4px 8px; font-size: 11px;">Re-scan</button>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% else %}
+        <p style="color: var(--text-muted); font-size: 13px; text-align: center; padding: 20px;">
+            No scans recorded yet. Enter a target above to execute your first reconnaissance scan!
+        </p>
+    {% endif %}
+</div>
+
+<!-- QUOTA EXCEEDED MODAL -->
+<div id="quotaModal" class="modal-overlay">
+    <div class="modal-content" style="text-align: center;">
+        <h3 style="color: var(--accent-red); margin-top: 0;">[!] DAILY SCAN QUOTA EXCEEDED</h3>
+        <p style="font-size: 14px; margin: 20px 0;">
+            You have used all <strong id="modalQuotaLimit">50</strong> IP checks allotted for your plan today.
+        </p>
+        <div style="background: #0d1117; padding: 15px; border-radius: 4px; border: 1px dashed var(--border-color); font-size: 13px; margin-bottom: 20px;">
+            <p style="margin: 0 0 8px 0;">Daily quotas automatically renew every night at <strong>12:00 AM Midnight</strong>.</p>
+            <p style="margin: 0; color: var(--accent-blue);">Next renewal in: <strong id="modalResetTimer">{{ time_info['countdown_str'] }}</strong></p>
+        </div>
+        <p style="font-size: 13px; color: var(--text-muted);">
+            Need more scanning capacity right now? Upgrade to <strong>Monthly Pro (200 checks/day)</strong> or <strong>Lifetime Elite (500 checks/day)</strong>!
+        </p>
+        <div style="display: flex; gap: 10px; justify-content: center; margin-top: 20px;">
+            <a href="{{ url_for('plans') }}" class="btn" style="background: var(--accent-green); color: #0d1117;">Upgrade Plan Now</a>
+            <button onclick="closeQuotaModal()" class="btn-secondary">Close Notice</button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Live countdown to midnight 12:00 AM renewal
+    let secondsUntilMidnight = {{ time_info['seconds_left'] }};
+    const dailyLimit = {{ user.daily_limit }};
+    const isAdmin = {{ 'true' if user.is_admin() else 'false' }};
+
+    function updateCountdown() {
+        if (secondsUntilMidnight > 0) {
+            secondsUntilMidnight--;
+        } else {
+            // Clock struck midnight! Automatically refresh to reset daily quota!
+            location.reload();
+            return;
+        }
+
+        const hours = Math.floor(secondsUntilMidnight / 3600);
+        const minutes = Math.floor((secondsUntilMidnight % 3600) / 60);
+        const seconds = secondsUntilMidnight % 60;
+        const formatted = `${String(hours).padStart(2, '0')}h ${String(minutes).padStart(2, '0')}m ${String(seconds).padStart(2, '0')}s`;
+        
+        const timerElem = document.getElementById('resetTimer');
+        if (timerElem) timerElem.innerText = formatted;
+        
+        const modalTimerElem = document.getElementById('modalResetTimer');
+        if (modalTimerElem) modalTimerElem.innerText = formatted;
+    }
+
+    setInterval(updateCountdown, 1000);
+
+    function updateQuotaDisplay(data) {
+        if (isAdmin) return;
+        if (data.remaining_checks !== undefined) {
+            const remainingElem = document.getElementById('quotaRemaining');
+            if (remainingElem) remainingElem.innerText = data.remaining_checks;
+
+            const usedElem = document.getElementById('checksUsed');
+            if (usedElem && data.checks_today !== undefined) usedElem.innerText = data.checks_today;
+
+            const fillElem = document.getElementById('quotaFill');
+            if (fillElem && data.daily_limit) {
+                const pct = (data.checks_today / data.daily_limit) * 100;
+                fillElem.style.width = Math.max(0, 100 - pct) + '%';
+                if (pct > 85) {
+                    fillElem.className = 'quota-progress-fill danger';
+                } else if (pct > 60) {
+                    fillElem.className = 'quota-progress-fill warning';
+                } else {
+                    fillElem.className = 'quota-progress-fill';
+                }
+            }
+        }
+    }
+
+    function showQuotaModal(limit) {
+        document.getElementById('modalQuotaLimit').innerText = limit || dailyLimit;
+        document.getElementById('quotaModal').style.display = 'flex';
+    }
+
+    function closeQuotaModal() {
+        document.getElementById('quotaModal').style.display = 'none';
+    }
+
+    function populateAndRescan(target, scanType) {
+        if (scanType === 'nmap') {
+            document.getElementById('nmap-target').value = target;
+            runComprehensiveNmapScan();
+        } else if (scanType === 'ftp_anonymous') {
+            document.getElementById('anon-target').value = target;
+            checkAnonymousLogin();
+        } else {
+            document.getElementById('targetInput').value = target;
+            startRecon();
+        }
+    }
+
+    // Module 1: Initial Recon Scanner
+    function startRecon() {
+        const targetValue = document.getElementById('targetInput').value.trim();
+        if (!targetValue) return alert("Please enter a valid target IP or Domain.");
+
+        document.getElementById('loadingText').style.display = 'block';
+        document.getElementById('metaTarget').innerText = targetValue;
+        document.getElementById('metaIP').innerText = "Resolving...";
+        document.getElementById('pingResult').innerText = "Executing live ping...";
+        document.getElementById('dnsResult').innerText = "Fetching DNS records...";
+        document.getElementById('portResult').innerText = "Scanning ports (takes a few moments)...";
+
+        const payload = { target: targetValue };
+
+        // 1. Metadata check
+        fetch('/api/scan/metadata', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        })
+        .then(res => res.json().then(data => ({ status: res.status, data })))
+        .then(({ status, data }) => {
+            if (status === 429) {
+                showQuotaModal(data.daily_limit);
+                document.getElementById('metaIP').innerText = "Daily Quota Reached";
+                return;
+            }
+            if (data.resolved_ip) {
+                document.getElementById('metaIP').innerText = data.resolved_ip;
+                updateQuotaDisplay(data);
+            }
+        })
+        .catch(err => console.error(err));
+
+        // 2. Ping check
+        fetch('/api/scan/ping', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        })
+        .then(res => res.json().then(data => ({ status: res.status, data })))
+        .then(({ status, data }) => {
+            if (status === 429) {
+                document.getElementById('pingResult').innerText = "Quota limit reached.";
+                return;
+            }
+            document.getElementById('pingResult').innerText = data.ping || data.error;
+            updateQuotaDisplay(data);
+        })
+        .catch(err => console.error(err));
+
+        // 3. DNS check
+        fetch('/api/scan/dns', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        })
+        .then(res => res.json().then(data => ({ status: res.status, data })))
+        .then(({ status, data }) => {
+            if (status === 429) {
+                document.getElementById('dnsResult').innerText = "Quota limit reached.";
+                return;
+            }
+            document.getElementById('dnsResult').innerText = data.dns || data.error;
+            updateQuotaDisplay(data);
+        })
+        .catch(err => console.error(err));
+
+        // 4. Ports check
+        fetch('/api/scan/ports', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        })
+        .then(res => res.json().then(data => ({ status: res.status, data })))
+        .then(({ status, data }) => {
+            document.getElementById('loadingText').style.display = 'none';
+            if (status === 429) {
+                document.getElementById('portResult').innerText = "Quota limit reached.";
+                return;
+            }
+            if (Array.isArray(data.ports)) {
+                if (data.ports.length === 0) {
+                    document.getElementById('portResult').innerText = "No open ports detected via Nmap scan.";
+                } else {
+                    let formatted = data.ports.map(p => {
+                        if (typeof p === 'object') {
+                            return `Port ${p.port}/${p.protocol} - ${p.state.toUpperCase()} (${p.service})`;
+                        }
+                        return p;
+                    }).join('\n');
+                    document.getElementById('portResult').innerText = formatted;
+                }
+            } else {
+                document.getElementById('portResult').innerText = data.ports || data.error;
+            }
+            updateQuotaDisplay(data);
+        })
+        .catch(err => {
+            document.getElementById('loadingText').style.display = 'none';
+            console.error(err);
+        });
+    }
+
+    // Module 2: Anonymous Login Check
+    function checkAnonymousLogin() {
+        const target = document.getElementById('anon-target').value.trim();
+        const port = document.getElementById('anon-port').value;
+        const resultDiv = document.getElementById('anon-result');
+
+        if (!target) return alert('Please enter a target address.');
+
+        resultDiv.innerHTML = "Auditing target service for unauthenticated access...";
+        resultDiv.style.color = "#c9d1d9";
+
+        fetch('/api/anonymous-check', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ target: target, port: port })
+        })
+        .then(res => res.json().then(data => ({ status: res.status, data })))
+        .then(({ status, data }) => {
+            if (status === 429) {
+                showQuotaModal(data.daily_limit);
+                resultDiv.innerHTML = `[!] QUOTA EXCEEDED: ${data.error}`;
+                resultDiv.style.color = "var(--accent-red)";
+                return;
+            }
+            if (data.error) {
+                resultDiv.innerHTML = "Error: " + data.error;
+                resultDiv.style.color = "var(--accent-red)";
+            } else {
+                resultDiv.innerHTML = `[${data.status}] ${data.message}`;
+                if (data.status === 'VULNERABLE') {
+                    resultDiv.style.color = "var(--accent-red)";
+                } else if (data.status === 'SECURE') {
+                    resultDiv.style.color = "var(--accent-green)";
+                } else {
+                    resultDiv.style.color = "var(--accent-orange)";
+                }
+                updateQuotaDisplay(data);
+            }
+        })
+        .catch(err => {
+            resultDiv.innerHTML = "Connection error: " + err;
+            resultDiv.style.color = "var(--accent-red)";
+        });
+    }
+
+    // Module 3: Enterprise Nmap Scanner
+    function runComprehensiveNmapScan() {
+        const targetInput = document.getElementById('nmap-target');
+        const target = targetInput.value.trim();
+        const terminal = document.getElementById('nmap-report');
+
+        if (!target) return alert('Please enter a valid target IP or Domain.');
+
+        terminal.innerHTML = `[+] Initiating deep network assessment against: ${target}\n` +
+            `[+] Profile active: All-Ports (-p-), Aggressive Auditing (-A), Verbose (-v)\n` +
+            `[+] Scanning in background. Output will stream once completed...`;
+        terminal.style.color = "var(--accent-green)";
+
+        fetch('/api/scan/nmap', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ target: target })
+        })
+        .then(res => res.json().then(data => ({ status: res.status, data })))
+        .then(({ status, data }) => {
+            if (status === 429) {
+                showQuotaModal(data.daily_limit);
+                terminal.innerHTML = `[!] DAILY SCAN QUOTA EXCEEDED: ${data.error}`;
+                terminal.style.color = "var(--accent-red)";
+                return;
+            }
+            terminal.innerHTML = data.report || data.error;
+            if (data.status === 'error') {
+                terminal.style.color = "var(--accent-red)";
+            }
+            updateQuotaDisplay(data);
+        })
+        .catch(err => {
+            terminal.innerHTML = "[!] Web service communication breakdown: " + err;
+            terminal.style.color = "var(--accent-red)";
+        });
+    }
+</script>
+{% endblock %}

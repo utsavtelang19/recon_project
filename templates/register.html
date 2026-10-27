@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+
+{% block title %}Register - Reconnaissance Terminal{% endblock %}
+
+{% block content %}
+<div style="max-width: 500px; margin: 40px auto;">
+    <div class="card">
+        <h2 style="text-align: center; color: var(--accent-green);">[+] OPERATOR REGISTRATION</h2>
+        <p style="text-align: center; font-size: 13px; color: var(--text-muted); margin-bottom: 20px;">
+            Create your account to unlock terminal reconnaissance tools with 50 free IP checks/day.
+        </p>
+
+        <form method="POST" action="{{ url_for('auth.register') }}">
+            <div>
+                <label for="username" style="font-size: 12px; text-transform: uppercase;">Operator Username:</label>
+                <input type="text" id="username" name="username" value="{{ username or '' }}" placeholder="e.g., net_recon_ops" required autofocus minlength="3">
+            </div>
+
+            <div>
+                <label for="email" style="font-size: 12px; text-transform: uppercase;">Email Address:</label>
+                <input type="email" id="email" name="email" value="{{ email or '' }}" placeholder="operator@company.com" required>
+            </div>
+
+            <div>
+                <label for="password" style="font-size: 12px; text-transform: uppercase;">Access Password (min 6 chars):</label>
+                <input type="password" id="password" name="password" placeholder="••••••••" required minlength="6">
+            </div>
+
+            <div>
+                <label for="confirm_password" style="font-size: 12px; text-transform: uppercase;">Confirm Password:</label>
+                <input type="password" id="confirm_password" name="confirm_password" placeholder="••••••••" required minlength="6">
+            </div>
+
+            <button type="submit" style="width: 100%; margin-top: 10px; background: var(--btn-primary);">Create Free Account</button>
+        </form>
+
+        <div style="margin-top: 20px; padding: 12px; background: #0d1117; border: 1px dashed var(--accent-blue); border-radius: 4px; font-size: 12px;">
+            <div style="color: var(--accent-blue); font-weight: bold; margin-bottom: 4px;">[Free Tier Inclusions]</div>
+            <ul style="margin: 0; padding-left: 20px; color: var(--text-muted);">
+                <li><strong>50 IP checks</strong> per day renewed automatically every midnight (12:00 AM)</li>
+                <li>Comprehensive IP metadata & DNS nameserver audits</li>
+                <li>Live ICMP ping & FTP anonymous vulnerability checks</li>
+                <li>Enterprise Nmap all-ports deep scanner</li>
+                <li>Upgrade anytime to Monthly Pro (200 checks) or Lifetime Elite (500 checks)</li>
+            </ul>
+        </div>
+
+        <div style="text-align: center; margin-top: 25px; font-size: 13px;">
+            Already registered? 
+            <a href="{{ url_for('auth.login') }}" style="color: var(--accent-blue); text-decoration: none; font-weight: bold;">
+                Sign In to Terminal &rarr;
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}

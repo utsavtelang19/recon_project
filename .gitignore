@@ -1,0 +1,16 @@
+# Python bytecode
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Environment credentials & database files
+.env
+*.db
+*.sqlite
+recon.db
+
+# IDE and OS files
+.vscode/
+.idea/
+*.log
+Thumbs.db

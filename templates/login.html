@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+
+{% block title %}Login - Reconnaissance Terminal{% endblock %}
+
+{% block content %}
+<div style="max-width: 480px; margin: 40px auto;">
+    <div class="card">
+        <h2 style="text-align: center; color: var(--accent-blue);">[+] ACCESS AUTHENTICATION</h2>
+        <p style="text-align: center; font-size: 13px; color: var(--text-muted); margin-bottom: 25px;">
+            Enter your credentials to enter the reconnaissance terminal.
+        </p>
+
+        <form method="POST" action="{{ url_for('auth.login', next=request.args.get('next')) }}">
+            <div>
+                <label for="login_input" style="font-size: 12px; text-transform: uppercase;">Username or Email:</label>
+                <input type="text" id="login_input" name="login_input" value="{{ login_input or '' }}" placeholder="username or user@domain.com" required autofocus>
+            </div>
+
+            <div>
+                <label for="password" style="font-size: 12px; text-transform: uppercase;">Password:</label>
+                <input type="password" id="password" name="password" placeholder="••••••••" required>
+            </div>
+
+            <button type="submit" style="width: 100%; margin-top: 10px;">Authorize & Connect</button>
+        </form>
+
+        <div style="margin-top: 20px; padding: 12px; background: #0d1117; border: 1px dashed var(--border-color); border-radius: 4px; font-size: 12px;">
+            <div style="color: var(--accent-purple); font-weight: bold; margin-bottom: 4px;">[Default Admin Credentials]</div>
+            <div>Username: <strong style="color: #ffffff;">admin</strong></div>
+            <div>Password: <strong style="color: #ffffff;">Admin@123</strong></div>
+            <div style="color: var(--text-muted); font-size: 11px; margin-top: 4px;">(Provides full control to manage users, quotas & view all scans)</div>
+        </div>
+
+        <div style="text-align: center; margin-top: 25px; font-size: 13px;">
+            Don't have an account? 
+            <a href="{{ url_for('auth.register') }}" style="color: var(--accent-green); text-decoration: none; font-weight: bold;">
+                Register Free Account (50 checks/day) &rarr;
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -17,7 +17,13 @@ from models import db, User, ScanLog
 from auth import auth_bp, login_required, admin_required, get_current_user
 from admin_routes import admin_bp
 
-app = Flask(__name__)
+BASE_DIR = os.path.abspath(os.path.dirname(__file__))
+
+app = Flask(
+    __name__,
+    template_folder=os.path.join(BASE_DIR, 'templates'),
+    static_folder=os.path.join(BASE_DIR, 'static')
+)
 app.config['SECRET_KEY'] = SECRET_KEY
 app.config['SQLALCHEMY_DATABASE_URI'] = DATABASE_URI
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
@@ -43,26 +49,29 @@ def inject_global_vars():
 
 def init_database():
     """Creates database tables and seeds initial administrator if absent."""
-    with app.app_context():
-        db.create_all()
-        # Check if any admin exists
-        admin = User.query.filter_by(role='admin').first()
-        if not admin:
-            admin = User(
-                username=ADMIN_USERNAME,
-                email=ADMIN_EMAIL,
-                role='admin',
-                plan_tier='lifetime',
-                daily_limit=PLAN_LIMITS['lifetime'],
-                checks_today=0,
-                is_active=True
-            )
-            admin.set_password(ADMIN_PASSWORD)
-            db.session.add(admin)
-            db.session.commit()
-            print(f"[Init] Created default administrator: '{ADMIN_USERNAME}' (Password: '{ADMIN_PASSWORD}').")
-        else:
-            print(f"[Init] Database ready. Active Admin account exists: '{admin.username}'.")
+    try:
+        with app.app_context():
+            db.create_all()
+            # Check if any admin exists
+            admin = User.query.filter_by(role='admin').first()
+            if not admin:
+                admin = User(
+                    username=ADMIN_USERNAME,
+                    email=ADMIN_EMAIL,
+                    role='admin',
+                    plan_tier='lifetime',
+                    daily_limit=PLAN_LIMITS['lifetime'],
+                    checks_today=0,
+                    is_active=True
+                )
+                admin.set_password(ADMIN_PASSWORD)
+                db.session.add(admin)
+                db.session.commit()
+                print(f"[Init] Created default administrator: '{ADMIN_USERNAME}'.")
+            else:
+                print(f"[Init] Database ready. Active Admin account exists: '{admin.username}'.")
+    except Exception as e:
+        print(f"[Init Database Warning] {e}")
 
 def run_command(command_list, timeout=15):
     """Safely executes a system command and returns output string."""

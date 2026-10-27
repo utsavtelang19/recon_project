@@ -15,7 +15,13 @@ MYSQL_PORT = int(os.getenv('MYSQL_PORT', 3306))
 MYSQL_USER = os.getenv('MYSQL_USER', 'root')
 MYSQL_PASSWORD = os.getenv('MYSQL_PASSWORD', '')
 MYSQL_DB = os.getenv('MYSQL_DB', 'recon_db')
-SQLITE_DB_PATH = os.path.join(BASE_DIR, os.getenv('SQLITE_DB_PATH', 'recon.db'))
+
+# On Vercel / serverless, filesystem is read-only except /tmp
+IS_VERCEL = 'VERCEL' in os.environ or os.getenv('VERCEL') == '1'
+if IS_VERCEL:
+    SQLITE_DB_PATH = '/tmp/recon.db'
+else:
+    SQLITE_DB_PATH = os.path.join(BASE_DIR, os.getenv('SQLITE_DB_PATH', 'recon.db'))
 
 # Daily scan limits per tier
 PLAN_LIMITS = {

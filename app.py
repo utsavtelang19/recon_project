@@ -88,6 +88,7 @@ def run_command(command_list, timeout=15):
 # ==========================================
 
 @app.route('/')
+@app.route('/api/index')
 def home():
     user = get_current_user()
     if not user:
